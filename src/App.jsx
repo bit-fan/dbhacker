@@ -8,10 +8,10 @@ function AboutPage() {
         About this setup
       </p>
       <h1 className="mt-4 text-3xl font-semibold text-blue-50 sm:text-4xl">
-        Tailwind powers the UI, Redux manages state, and React Router handles navigation.
+        This app uses a modern React UI, Redux for state, and React Router for navigation.
       </h1>
       <p className="mt-4 max-w-2xl text-lg text-blue-100/80">
-        You can extend this starter with your own slices, pages, and components as your app grows.
+        It includes a structured chat workflow, ticket flow, and rule-based bot responses that you can extend.
       </p>
     </section>
   )
