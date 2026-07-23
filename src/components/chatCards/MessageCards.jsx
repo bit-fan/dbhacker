@@ -1,6 +1,7 @@
 import ChartMessageCard from './ChartMessageCard'
 import ImageMessageCard from './ImageMessageCard'
 import TableMessageCard from './TableMessageCard'
+import TicketListMessageCard from './TicketListMessageCard'
 import TextMessageCard from './TextMessageCard'
 
 function MessageCards({ parts = [] }) {
@@ -19,6 +20,10 @@ function MessageCards({ parts = [] }) {
 
         if (part.type === 'image') {
           return <ImageMessageCard key={key} src={part.src} alt={part.alt} caption={part.caption} />
+        }
+
+        if (part.type === 'ticketList') {
+          return <TicketListMessageCard key={key} tickets={part.tickets} />
         }
 
         return <TextMessageCard key={key} text={part.text || ''} />

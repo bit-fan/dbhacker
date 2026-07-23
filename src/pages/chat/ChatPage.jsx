@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   addAutoResponse,
   addMessage,
+  clearLatestTicketChannel,
   selectChannels,
+  selectLatestTicketChannelId,
   selectMessagesByChannel,
 } from '../../features/chat/chatSlice'
 import MessageCards from '../../components/chatCards/MessageCards'
@@ -14,9 +16,11 @@ function ChatPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [draft, setDraft] = useState('')
+  const messagesEndRef = useRef(null)
 
   const channels = useSelector(selectChannels)
   const messagesByChannel = useSelector(selectMessagesByChannel)
+  const latestTicketChannelId = useSelector(selectLatestTicketChannelId)
 
   const activeChannel = channels.find((channel) => channel.id === id)
 
@@ -25,6 +29,24 @@ function ChatPage() {
   }
 
   const activeMessages = messagesByChannel[activeChannel.id] ?? []
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [activeChannel.id, activeMessages.length])
+
+  useEffect(() => {
+    if (!latestTicketChannelId) {
+      return
+    }
+
+    if (latestTicketChannelId === activeChannel.id) {
+      dispatch(clearLatestTicketChannel())
+      return
+    }
+
+    navigate(`/chat/${latestTicketChannelId}`)
+    dispatch(clearLatestTicketChannel())
+  }, [activeChannel.id, dispatch, latestTicketChannelId, navigate])
 
   const submitMessage = (event) => {
     event.preventDefault()
@@ -102,6 +124,7 @@ function ChatPage() {
                   </article>
                 )
               })}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 

@@ -217,6 +217,33 @@
         ]
       }
     }
-  ]
-
+  ],
+  "issueBot": {
+    "author": "AIDA Bot",
+    "ticketPrefix": "TCK",
+    "ticketChannelPrefix": "ticket",
+    "intakeIntro": "I cannot solve this immediately. I need a few details before I create a support ticket.",
+    "questions": [
+      {
+        "key": "impact",
+        "label": "Impact",
+        "question": "Who is impacted and how severe is it?"
+      },
+      {
+        "key": "environment",
+        "label": "Environment",
+        "question": "Which environment is affected (prod/staging/dev)?"
+      },
+      {
+        "key": "frequency",
+        "label": "Frequency",
+        "question": "How often does it happen and since when?"
+      },
+      {
+        "key": "attemptedFix",
+        "label": "Attempted Fix",
+        "question": "What have you already tried?"
+      }
+    ]
+  }
 }
