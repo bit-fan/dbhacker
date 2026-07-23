@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit'
 import channelData from '../../data/channel.json'
 import chatRespData from '../../data/chatresp.json'
+import { DEFAULT_BOT_NAME } from '../../constants/bot'
 
 const channels = channelData.channels ?? []
 
@@ -117,7 +118,7 @@ const createDefaultResponseMessage = (channelId) => {
 
   return {
     id: `${channelId}-default-${Date.now()}`,
-    author: defaultResponse.author || 'Bot',
+    author: defaultResponse.author || DEFAULT_BOT_NAME,
     sender: 'other',
     time: getNowTime(),
     parts: defaultResponse.parts ?? [{ type: 'text', text: 'Received.' }],
@@ -137,7 +138,7 @@ const buildRuleResponseMessage = (channelId, userText) => {
 
   return {
     id: `${channelId}-resp-${Date.now()}`,
-    author: selected.author || 'Bot',
+    author: selected.author || DEFAULT_BOT_NAME,
     sender: 'other',
     time: getNowTime(),
     parts: selected.parts ?? [{ type: 'text', text: 'Received.' }],
@@ -160,7 +161,7 @@ const refreshTicketBoardMessage = (state) => {
 
   const boardMessage = createOtherMessage({
     id: `${TICKETS_CHANNEL_ID}-board`,
-    author: issueBot.author || 'AIDA Bot',
+    author: issueBot.author || DEFAULT_BOT_NAME,
     parts: [
       {
         type: 'text',
@@ -210,7 +211,7 @@ const startIssueIntake = (state, channelId, problemStatement) => {
   state.messagesByChannel[channelId].push(
     createOtherMessage({
       id: `${channelId}-intake-intro-${Date.now()}`,
-      author: issueBot.author || 'AIDA Bot',
+      author: issueBot.author || DEFAULT_BOT_NAME,
       parts: [{ type: 'text', text: introText }],
     }),
   )
@@ -255,7 +256,7 @@ const closeIntakeAndCreateTicket = (state, channelId, flow) => {
   state.messagesByChannel[ticketChannelId] = [
     createOtherMessage({
       id: `${ticketChannelId}-summary-${Date.now()}`,
-      author: issueBot.author || 'AIDA Bot',
+      author: issueBot.author || DEFAULT_BOT_NAME,
       parts: [
         {
           type: 'text',
@@ -279,7 +280,7 @@ const closeIntakeAndCreateTicket = (state, channelId, flow) => {
   state.messagesByChannel[channelId].push(
     createOtherMessage({
       id: `${channelId}-intake-done-${Date.now()}`,
-      author: issueBot.author || 'AIDA Bot',
+      author: issueBot.author || DEFAULT_BOT_NAME,
       parts: [
         {
           type: 'text',
@@ -317,7 +318,7 @@ const handleIntakeAnswer = (state, channelId, userText) => {
     state.messagesByChannel[channelId].push(
       createOtherMessage({
         id: `${channelId}-intake-q-${Date.now()}`,
-        author: issueBot.author || 'AIDA Bot',
+        author: issueBot.author || DEFAULT_BOT_NAME,
         parts: [{ type: 'text', text: nextQuestion.question }],
       }),
     )
@@ -346,7 +347,7 @@ const tryApplyTicketCommand = (state, channelId, userText) => {
     state.messagesByChannel[channelId].push(
       createOtherMessage({
         id: `${channelId}-ticket-not-found-${Date.now()}`,
-        author: issueBot.author || 'AIDA Bot',
+        author: issueBot.author || DEFAULT_BOT_NAME,
         parts: [{ type: 'text', text: `Ticket ${requestedId} was not found.` }],
       }),
     )
@@ -364,7 +365,7 @@ const tryApplyTicketCommand = (state, channelId, userText) => {
   state.messagesByChannel[channelId].push(
     createOtherMessage({
       id: `${channelId}-ticket-status-${Date.now()}`,
-      author: issueBot.author || 'AIDA Bot',
+      author: issueBot.author || DEFAULT_BOT_NAME,
       parts: [
         {
           type: 'text',

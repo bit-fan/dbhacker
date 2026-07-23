@@ -2,15 +2,15 @@
 
 :root {
   color-scheme: dark;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #020617;
-  color: #f8fafc;
+  background-color: #001833;
+  color: #eef4ff;
 }
 
 * {
@@ -21,7 +21,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: linear-gradient(135deg, #020617 0%, #111827 100%);
+  background:
+    radial-gradient(1200px 600px at 100% -100px, #004c99 0%, transparent 50%),
+    linear-gradient(165deg, #001833 0%, #00264d 45%, #001226 100%);
 }
 
 #root {

@@ -89,7 +89,7 @@
     ]
   },
   "defaultResponse": {
-    "author": "Bot",
+    "author": "Justin",
     "parts": [
       { "type": "text", "text": "Thanks, message received." }
     ]
@@ -219,7 +219,7 @@
     }
   ],
   "issueBot": {
-    "author": "AIDA Bot",
+    "author": "Justin",
     "ticketPrefix": "TCK",
     "ticketChannelPrefix": "ticket",
     "intakeIntro": "I cannot solve this immediately. I need a few details before I create a support ticket.",
