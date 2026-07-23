@@ -1,0 +1,222 @@
+{
+  "seedMessagesByChannel": {
+    "general": [
+      {
+        "id": "g-1",
+        "author": "Mia",
+        "sender": "other",
+        "time": "09:20",
+        "parts": [
+          { "type": "text", "text": "Daily sync starts in 10 minutes. Share blockers in this thread." }
+        ]
+      },
+      {
+        "id": "g-2",
+        "author": "Leo",
+        "sender": "other",
+        "time": "09:27",
+        "parts": [
+          { "type": "text", "text": "I will post the sprint dashboard after standup." },
+          {
+            "type": "table",
+            "columns": ["Metric", "Value"],
+            "rows": [
+              ["Open bugs", 7],
+              ["Completed stories", 14]
+            ]
+          }
+        ]
+      }
+    ],
+    "design": [
+      {
+        "id": "d-1",
+        "author": "Ava",
+        "sender": "other",
+        "time": "08:42",
+        "parts": [
+          { "type": "text", "text": "Uploaded new icon set. Please review contrast before noon." },
+          {
+            "type": "image",
+            "src": "/favicon.svg",
+            "alt": "Design mockup",
+            "caption": "Latest hero variation"
+          }
+        ]
+      }
+    ],
+    "engineering": [
+      {
+        "id": "e-1",
+        "author": "Noah",
+        "sender": "other",
+        "time": "08:58",
+        "parts": [
+          { "type": "text", "text": "API deploy is complete. Monitoring error rate for the next hour." },
+          {
+            "type": "chart",
+            "title": "Error rate (last 5 mins)",
+            "series": [
+              { "label": "08:50", "value": 0.7, "color": "#2dd4bf" },
+              { "label": "08:55", "value": 0.4, "color": "#22d3ee" },
+              { "label": "09:00", "value": 0.3, "color": "#06b6d4" }
+            ]
+          }
+        ]
+      }
+    ],
+    "product": [
+      {
+        "id": "p-1",
+        "author": "Ella",
+        "sender": "other",
+        "time": "09:05",
+        "parts": [
+          { "type": "text", "text": "Roadmap review moved to Friday, 2pm." }
+        ]
+      }
+    ],
+    "support": [
+      {
+        "id": "s-1",
+        "author": "Ivy",
+        "sender": "other",
+        "time": "09:11",
+        "parts": [
+          { "type": "text", "text": "Three high-priority tickets need engineering input." }
+        ]
+      }
+    ]
+  },
+  "defaultResponse": {
+    "author": "Bot",
+    "parts": [
+      { "type": "text", "text": "Thanks, message received." }
+    ]
+  },
+  "responseRules": [
+    {
+      "id": "standup-all",
+      "priority": 100,
+      "match": {
+        "mode": "all",
+        "terms": ["standup", "blocker"]
+      },
+      "response": {
+        "author": "Mia",
+        "parts": [
+          { "type": "text", "text": "Noted for standup and blocker review. I pinned this for the morning sync." }
+        ]
+      }
+    },
+    {
+      "id": "dashboard-any",
+      "priority": 80,
+      "match": {
+        "mode": "any",
+        "terms": ["status", "dashboard", "metric"]
+      },
+      "response": {
+        "author": "Leo",
+        "parts": [
+          { "type": "text", "text": "Updated metrics are ready:" },
+          {
+            "type": "table",
+            "columns": ["Metric", "Value"],
+            "rows": [
+              ["Cycle time", "2.1d"],
+              ["Deployment freq", "5/day"]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "release-regex",
+      "priority": 60,
+      "match": {
+        "mode": "regex",
+        "pattern": "release\\s*v?\\d+",
+        "flags": "i"
+      },
+      "response": {
+        "author": "Mia",
+        "parts": [
+          { "type": "text", "text": "Release callout detected. I will add this to the release checklist." }
+        ]
+      }
+    },
+    {
+      "id": "design-hero-any",
+      "priority": 70,
+      "match": {
+        "mode": "any",
+        "terms": ["mockup", "hero", "image"]
+      },
+      "response": {
+        "author": "Ava",
+        "parts": [
+          { "type": "text", "text": "Here is the latest visual option." },
+          {
+            "type": "image",
+            "src": "/favicon.svg",
+            "alt": "Design preview",
+            "caption": "Preview from design bot"
+          }
+        ]
+      }
+    },
+    {
+      "id": "design-color-exact",
+      "priority": 50,
+      "match": {
+        "mode": "exact",
+        "terms": ["color review"]
+      },
+      "response": {
+        "author": "Ava",
+        "parts": [
+          { "type": "text", "text": "Color review request accepted. I will post contrast notes in 30 minutes." }
+        ]
+      }
+    },
+    {
+      "id": "engineering-latency-any",
+      "priority": 90,
+      "match": {
+        "mode": "any",
+        "terms": ["error", "latency", "api"]
+      },
+      "response": {
+        "author": "Noah",
+        "parts": [
+          { "type": "text", "text": "Current service telemetry:" },
+          {
+            "type": "chart",
+            "title": "API latency (ms)",
+            "series": [
+              { "label": "p50", "value": 95, "color": "#22d3ee" },
+              { "label": "p90", "value": 210, "color": "#06b6d4" },
+              { "label": "p99", "value": 420, "color": "#0284c7" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "engineering-deploy-starts",
+      "priority": 40,
+      "match": {
+        "mode": "startsWith",
+        "terms": ["deploy", "deployment"]
+      },
+      "response": {
+        "author": "Noah",
+        "parts": [
+          { "type": "text", "text": "Deployment update received. I will share rollout status shortly." }
+        ]
+      }
+    }
+  ]
+
+}

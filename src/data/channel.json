@@ -1,0 +1,9 @@
+{
+  "channels": [
+    { "id": "general", "name": "General", "status": "Online" },
+    { "id": "design", "name": "Design", "status": "2 new" },
+    { "id": "engineering", "name": "Engineering", "status": "5 active" },
+    { "id": "product", "name": "Product", "status": "Planning" },
+    { "id": "support", "name": "Support", "status": "Waiting" }
+  ]
+}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
+  addAutoResponse,
   addMessage,
   selectChannels,
   selectMessagesByChannel,
@@ -34,6 +35,7 @@ function ChatPage() {
     }
 
     dispatch(addMessage({ channelId: activeChannel.id, text }))
+    dispatch(addAutoResponse({ channelId: activeChannel.id, userText: text }))
     setDraft('')
   }
 

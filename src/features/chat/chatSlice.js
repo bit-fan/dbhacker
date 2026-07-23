@@ -1,122 +1,95 @@
 import { createSlice } from '@reduxjs/toolkit'
+import channelData from '../../data/channel.json'
+import chatRespData from '../../data/chatresp.json'
 
-const channels = [
-  { id: 'general', name: 'General', status: 'Online' },
-  { id: 'design', name: 'Design', status: '2 new' },
-  { id: 'engineering', name: 'Engineering', status: '5 active' },
-  { id: 'product', name: 'Product', status: 'Planning' },
-  { id: 'support', name: 'Support', status: 'Waiting' },
-]
+const channels = channelData.channels ?? []
+
+const seedMessagesByChannel = chatRespData.seedMessagesByChannel ?? {}
+const responseRules = chatRespData.responseRules ?? []
+const defaultResponse = chatRespData.defaultResponse ?? null
+
+const getNowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+const normalizeText = (value) => String(value ?? '').toLowerCase().trim()
+
+const termsMatch = (mode, normalizedText, terms) => {
+  const normalizedTerms = (terms ?? []).map((term) => normalizeText(term)).filter(Boolean)
+
+  if (normalizedTerms.length === 0) {
+    return false
+  }
+
+  if (mode === 'all') {
+    return normalizedTerms.every((term) => normalizedText.includes(term))
+  }
+
+  if (mode === 'exact') {
+    return normalizedTerms.some((term) => normalizedText === term)
+  }
+
+  if (mode === 'startsWith') {
+    return normalizedTerms.some((term) => normalizedText.startsWith(term))
+  }
+
+  return normalizedTerms.some((term) => normalizedText.includes(term))
+}
+
+const ruleMatches = (rule, normalizedText) => {
+  const match = rule.match ?? {}
+  const mode = match.mode ?? 'any'
+
+  if (mode === 'regex') {
+    if (!match.pattern) {
+      return false
+    }
+
+    try {
+      const flags = match.flags ?? 'i'
+      return new RegExp(match.pattern, flags).test(normalizedText)
+    } catch {
+      return false
+    }
+  }
+
+  const terms = match.terms ?? rule.keywords ?? []
+  return termsMatch(mode, normalizedText, terms)
+}
+
+const toRuleResponse = (rule) => {
+  if (rule.response) {
+    return rule.response
+  }
+
+  return {
+    author: rule.author,
+    parts: rule.parts,
+  }
+}
+
+const buildResponseMessage = (channelId, userText) => {
+  const normalizedText = normalizeText(userText)
+  const sortedRules = [...responseRules].sort(
+    (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
+  )
+  const matchedRule = sortedRules.find((rule) => ruleMatches(rule, normalizedText))
+  const selected = matchedRule ? toRuleResponse(matchedRule) : defaultResponse
+
+  if (!selected) {
+    return null
+  }
+
+  return {
+    id: `${channelId}-resp-${Date.now()}`,
+    author: selected.author || 'Bot',
+    sender: 'other',
+    time: getNowTime(),
+    parts: selected.parts ?? [{ type: 'text', text: 'Received.' }],
+  }
+}
 
 const initialState = {
   channels,
-  messagesByChannel: {
-    general: [
-      {
-        id: 'g-1',
-        author: 'Mia',
-        sender: 'other',
-        time: '09:20',
-        parts: [
-          {
-            type: 'text',
-            text: 'Daily sync starts in 10 minutes. Share blockers in this thread.',
-          },
-        ],
-      },
-      {
-        id: 'g-2',
-        author: 'Leo',
-        sender: 'other',
-        time: '09:27',
-        parts: [
-          {
-            type: 'text',
-            text: 'I will post the sprint dashboard after standup.',
-          },
-          {
-            type: 'table',
-            columns: ['Metric', 'Value'],
-            rows: [
-              ['Open bugs', 7],
-              ['Completed stories', 14],
-            ],
-          },
-        ],
-      },
-    ],
-    design: [
-      {
-        id: 'd-1',
-        author: 'Ava',
-        sender: 'other',
-        time: '08:42',
-        parts: [
-          {
-            type: 'text',
-            text: 'Uploaded new icon set. Please review contrast before noon.',
-          },
-          {
-            type: 'image',
-            src: '/favicon.svg',
-            alt: 'Design mockup',
-            caption: 'Latest hero variation',
-          },
-        ],
-      },
-    ],
-    engineering: [
-      {
-        id: 'e-1',
-        author: 'Noah',
-        sender: 'other',
-        time: '08:58',
-        parts: [
-          {
-            type: 'text',
-            text: 'API deploy is complete. Monitoring error rate for the next hour.',
-          },
-          {
-            type: 'chart',
-            title: 'Error rate (last 5 mins)',
-            series: [
-              { label: '08:50', value: 0.7, color: '#2dd4bf' },
-              { label: '08:55', value: 0.4, color: '#22d3ee' },
-              { label: '09:00', value: 0.3, color: '#06b6d4' },
-            ],
-          },
-        ],
-      },
-    ],
-    product: [
-      {
-        id: 'p-1',
-        author: 'Ella',
-        sender: 'other',
-        time: '09:05',
-        parts: [
-          {
-            type: 'text',
-            text: 'Roadmap review moved to Friday, 2pm.',
-          },
-        ],
-      },
-    ],
-    support: [
-      {
-        id: 's-1',
-        author: 'Ivy',
-        sender: 'other',
-        time: '09:11',
-        parts: [
-          {
-            type: 'text',
-            text: 'Three high-priority tickets need engineering input.',
-          },
-        ],
-      },
-    ],
-  },
+  messagesByChannel: seedMessagesByChannel,
 }
 
 const chatSlice = createSlice({
@@ -143,7 +116,7 @@ const chatSlice = createSlice({
               id: `${channelId}-${now.getTime()}`,
               author: 'You',
               sender: 'self',
-              time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              time: getNowTime(),
               parts: [
                 {
                   type: 'text',
@@ -155,10 +128,33 @@ const chatSlice = createSlice({
         }
       },
     },
+    addAutoResponse: {
+      reducer(state, action) {
+        const { channelId, message } = action.payload
+
+        if (!message) {
+          return
+        }
+
+        if (!state.messagesByChannel[channelId]) {
+          state.messagesByChannel[channelId] = []
+        }
+
+        state.messagesByChannel[channelId].push(message)
+      },
+      prepare({ channelId, userText }) {
+        return {
+          payload: {
+            channelId,
+            message: buildResponseMessage(channelId, userText),
+          },
+        }
+      },
+    },
   },
 })
 
-export const { addMessage } = chatSlice.actions
+export const { addMessage, addAutoResponse } = chatSlice.actions
 
 export const selectChannels = (state) => state.chat.channels
 export const selectMessagesByChannel = (state) => state.chat.messagesByChannel
