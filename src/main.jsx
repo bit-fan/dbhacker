@@ -6,10 +6,12 @@ import './index.css'
 import App from './App.jsx'
 import { store } from './app/store.js'
 
+const routerBase = import.meta.env.BASE_URL || '/'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBase}>
         <App />
       </BrowserRouter>
     </Provider>
