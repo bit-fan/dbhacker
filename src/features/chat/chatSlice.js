@@ -143,7 +143,69 @@ const starterTicketSeeds = [
     status: 'resolved',
     severity: 'unimportant',
   },
+  {
+    id: 'TCK-0006',
+    summary: 'Checkout page spinner hangs on Safari 17',
+    status: 'open',
+    severity: 'important',
+  },
+  {
+    id: 'TCK-0007',
+    summary: 'Search API returning intermittent 502 for APAC',
+    status: 'triage',
+    severity: 'urgent',
+  },
+  {
+    id: 'TCK-0008',
+    summary: 'Email digest job delayed by queue backlog',
+    status: 'in-progress',
+    severity: 'normal',
+  },
+  {
+    id: 'TCK-0009',
+    summary: 'Billing export CSV missing tax column headers',
+    status: 'blocked',
+    severity: 'low',
+  },
+  {
+    id: 'TCK-0010',
+    summary: 'SSO callback URL mismatch for enterprise tenant',
+    status: 'resolved',
+    severity: 'important',
+  },
+  {
+    id: 'TCK-0011',
+    summary: 'Mobile push notification badge count incorrect',
+    status: 'open',
+    severity: 'normal',
+  },
+  {
+    id: 'TCK-0012',
+    summary: 'Analytics dashboard filters reset unexpectedly',
+    status: 'triage',
+    severity: 'low',
+  },
+  {
+    id: 'TCK-0013',
+    summary: 'Webhook retries not honoring exponential backoff',
+    status: 'in-progress',
+    severity: 'important',
+  },
+  {
+    id: 'TCK-0014',
+    summary: 'CDN cache purge endpoint timing out on large sites',
+    status: 'blocked',
+    severity: 'urgent',
+  },
+  {
+    id: 'TCK-0015',
+    summary: 'Theme switcher preference not persisted after logout',
+    status: 'resolved',
+    severity: 'unimportant',
+  },
 ]
+
+const seededTicketParticipants = ['Alex', 'Priya', 'Marco', 'Chen', 'Sofia', 'Ravi', 'Nina']
 
 const issueKeywords = [
   'issue',
@@ -198,6 +260,49 @@ const createOtherMessage = ({ id, author, parts }) => ({
   time: getNowTime(),
   parts,
 })
+
+const buildSeededTicketConversation = (ticketChannelId, seed, statusText, index) => {
+  const first = seededTicketParticipants[index % seededTicketParticipants.length]
+  const second = seededTicketParticipants[(index + 2) % seededTicketParticipants.length]
+
+  return [
+    createOtherMessage({
+      id: `${ticketChannelId}-seed-brief`,
+      author: first,
+      parts: [
+        {
+          type: 'text',
+          text: `Investigating ${seed.id}: ${seed.summary}`,
+        },
+      ],
+    }),
+    createOtherMessage({
+      id: `${ticketChannelId}-seed-status`,
+      author: second,
+      parts: [
+        {
+          type: 'text',
+          text: `Current status is ${statusText}. Capturing evidence and workaround options.`,
+        },
+      ],
+    }),
+    createOtherMessage({
+      id: `${ticketChannelId}-seed-summary`,
+      author: issueBot.author || DEFAULT_BOT_NAME,
+      parts: [
+        {
+          type: 'table',
+          columns: ['Field', 'Value'],
+          rows: [
+            ['Ticket', seed.id],
+            ['Status', statusText],
+            ['Severity', seed.severity],
+          ],
+        },
+      ],
+    }),
+  ]
+}
 
 const createDefaultResponseMessage = (channelId) => {
   if (!defaultResponse) {
@@ -560,6 +665,19 @@ const buildInitialState = () => {
     initial.messagesByChannel[JUSTIN_CHANNEL_ID] = []
   }
 
+  initial.messagesByChannel[JUSTIN_CHANNEL_ID] = [
+    createOtherMessage({
+      id: 'general-justin-welcome',
+      author: issueBot.author || DEFAULT_BOT_NAME,
+      parts: [{ type: 'text', text: 'Hi, I am Justin. Share an issue and I will help file or route tickets.' }],
+    }),
+    createOtherMessage({
+      id: 'general-justin-guidance',
+      author: issueBot.author || DEFAULT_BOT_NAME,
+      parts: [{ type: 'text', text: 'Use commands like: triage ticket TCK-0007 or resolve ticket TCK-0011.' }],
+    }),
+  ]
+
   starterTicketSeeds.forEach((seed, index) => {
     const ticketChannelId = `ticket-${seed.id.toLowerCase()}-${slugify(seed.summary).slice(0, 36)}`
     const createdAt = Date.now() - (index + 1) * 60000
@@ -589,26 +707,12 @@ const buildInitialState = () => {
       updatedAt: createdAt,
     })
 
-    initial.messagesByChannel[ticketChannelId] = [
-      createOtherMessage({
-        id: `${ticketChannelId}-seed-summary`,
-        author: issueBot.author || DEFAULT_BOT_NAME,
-        parts: [
-          {
-            type: 'text',
-            text: `${seed.id} seeded ticket: ${seed.summary}`,
-          },
-          {
-            type: 'table',
-            columns: ['Field', 'Value'],
-            rows: [
-              ['Status', statusText],
-              ['Severity', seed.severity],
-            ],
-          },
-        ],
-      }),
-    ]
+    initial.messagesByChannel[ticketChannelId] = buildSeededTicketConversation(
+      ticketChannelId,
+      seed,
+      statusText,
+      index,
+    )
   })
 
   ensureTicketListChannel(initial)
@@ -671,6 +775,15 @@ const chatSlice = createSlice({
         }
 
         if (handleIntakeAnswer(state, channelId, userText)) {
+          return
+        }
+
+        // Keep the Justin channel as a strict 1:1 between Justin and You.
+        if (channelId === JUSTIN_CHANNEL_ID) {
+          const justinReply = createDefaultResponseMessage(channelId)
+          if (justinReply) {
+            state.messagesByChannel[channelId].push(justinReply)
+          }
           return
         }
 
