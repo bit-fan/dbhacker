@@ -25,10 +25,10 @@ describe('MessageCards', () => {
         type: 'ticketList',
         tickets: [
           {
-            id: 'TCK-0001',
+            id: '001',
             status: 'Open',
             summary: 'Login failure',
-            channelId: 'ticket-tck-0001-login-failure',
+            channelId: 'ticket-001-login-failure',
           },
         ],
       },
@@ -43,7 +43,7 @@ describe('MessageCards', () => {
     expect(screen.getByText('hello world')).toBeInTheDocument()
     expect(screen.getByText('Latency')).toBeInTheDocument()
     expect(screen.getByAltText('preview image')).toBeInTheDocument()
-    expect(screen.getByText('TCK-0001')).toBeInTheDocument()
+    expect(screen.getByText('001')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open' })).toBeInTheDocument()
   })
 })

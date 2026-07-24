@@ -1,75 +1,81 @@
-import { createSlice } from '@reduxjs/toolkit'
-import channelData from '../../data/channel.json'
-import chatRespData from '../../data/chatresp.json'
-import { DEFAULT_BOT_NAME } from '../../constants/bot'
+import { createSlice } from '@reduxjs/toolkit';
+import channelData from '../../data/channel.json';
+import chatRespData from '../../data/chatresp.json';
+import { DEFAULT_BOT_NAME } from '../../constants/bot';
 
-const channels = channelData.channels ?? []
+const channels = channelData.channels ?? [];
 
-const seedMessagesByChannel = chatRespData.seedMessagesByChannel ?? {}
-const responseRules = chatRespData.responseRules ?? []
-const defaultResponse = chatRespData.defaultResponse ?? null
-const issueBot = chatRespData.issueBot ?? {}
+const seedMessagesByChannel = chatRespData.seedMessagesByChannel ?? {};
+const responseRules = chatRespData.responseRules ?? [];
+const defaultResponse = chatRespData.defaultResponse ?? null;
+const issueBot = chatRespData.issueBot ?? {};
 
-const TICKETS_CHANNEL_ID = 'tickets'
-const JUSTIN_CHANNEL_ID = 'general'
+const TICKETS_CHANNEL_ID = 'tickets';
+const JUSTIN_CHANNEL_ID = 'general';
 
-const getNowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const getNowTime = () =>
+  new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-const normalizeText = (value) => String(value ?? '').toLowerCase().trim()
+const normalizeText = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .trim();
 
 const termsMatch = (mode, normalizedText, terms) => {
-  const normalizedTerms = (terms ?? []).map((term) => normalizeText(term)).filter(Boolean)
+  const normalizedTerms = (terms ?? [])
+    .map((term) => normalizeText(term))
+    .filter(Boolean);
 
   if (normalizedTerms.length === 0) {
-    return false
+    return false;
   }
 
   if (mode === 'all') {
-    return normalizedTerms.every((term) => normalizedText.includes(term))
+    return normalizedTerms.every((term) => normalizedText.includes(term));
   }
 
   if (mode === 'exact') {
-    return normalizedTerms.some((term) => normalizedText === term)
+    return normalizedTerms.some((term) => normalizedText === term);
   }
 
   if (mode === 'startsWith') {
-    return normalizedTerms.some((term) => normalizedText.startsWith(term))
+    return normalizedTerms.some((term) => normalizedText.startsWith(term));
   }
 
-  return normalizedTerms.some((term) => normalizedText.includes(term))
-}
+  return normalizedTerms.some((term) => normalizedText.includes(term));
+};
 
 const ruleMatches = (rule, normalizedText) => {
-  const match = rule.match ?? {}
-  const mode = match.mode ?? 'any'
+  const match = rule.match ?? {};
+  const mode = match.mode ?? 'any';
 
   if (mode === 'regex') {
     if (!match.pattern) {
-      return false
+      return false;
     }
 
     try {
-      const flags = match.flags ?? 'i'
-      return new RegExp(match.pattern, flags).test(normalizedText)
+      const flags = match.flags ?? 'i';
+      return new RegExp(match.pattern, flags).test(normalizedText);
     } catch {
-      return false
+      return false;
     }
   }
 
-  const terms = match.terms ?? rule.keywords ?? []
-  return termsMatch(mode, normalizedText, terms)
-}
+  const terms = match.terms ?? rule.keywords ?? [];
+  return termsMatch(mode, normalizedText, terms);
+};
 
 const toRuleResponse = (rule) => {
   if (rule.response) {
-    return rule.response
+    return rule.response;
   }
 
   return {
     author: rule.author,
     parts: rule.parts,
-  }
-}
+  };
+};
 
 const statusLabel = {
   open: 'Open',
@@ -77,7 +83,7 @@ const statusLabel = {
   'in-progress': 'In progress',
   blocked: 'Blocked',
   resolved: 'Resolved',
-}
+};
 
 const commandToStatus = {
   reopen: 'open',
@@ -86,7 +92,7 @@ const commandToStatus = {
   progress: 'in-progress',
   resolve: 'resolved',
   close: 'resolved',
-}
+};
 
 const statusOrder = {
   open: 0,
@@ -94,7 +100,7 @@ const statusOrder = {
   'in-progress': 2,
   blocked: 3,
   resolved: 4,
-}
+};
 
 const severityIconByLevel = {
   urgent: '🚨',
@@ -102,7 +108,7 @@ const severityIconByLevel = {
   normal: '⚠️',
   low: '🔹',
   unimportant: '⚪',
-}
+};
 
 const statusIconByValue = {
   open: '🟢',
@@ -110,102 +116,149 @@ const statusIconByValue = {
   'in-progress': '🔵',
   blocked: '⛔',
   resolved: '✅',
-}
+};
+
+const severitySignalByLevel = {
+  urgent: 'fire',
+  important: '🚨',
+  normal: '⚠️',
+  low: '🔹',
+  unimportant: '▫️',
+};
+
+const getCombinedSignalIcon = (status, severity) => {
+  if (status === 'resolved') {
+    return statusIconByValue.resolved;
+  }
+
+  if (status === 'blocked') {
+    return '⛔';
+  }
+
+  return severitySignalByLevel[severity] || statusIconByValue[status] || '❔';
+};
 
 const starterTicketSeeds = [
   {
-    id: 'TCK-0001',
-    summary: 'Checkout failures for EU card payments in production',
+    id: '001',
+    summary: 'Payment gateway timeout spikes during peak traffic',
+    status: 'triage',
+    severity: 'urgent',
+  },
+  {
+    id: '002',
+    summary: 'Authentication service outage in production region us-east',
     status: 'open',
     severity: 'urgent',
   },
   {
-    id: 'TCK-0002',
-    summary: 'Login OTP delivery delayed for mobile users',
-    status: 'triage',
-    severity: 'important',
-  },
-  {
-    id: 'TCK-0003',
-    summary: 'Dashboard widgets show stale analytics values',
-    status: 'in-progress',
-    severity: 'normal',
-  },
-  {
-    id: 'TCK-0004',
-    summary: 'Nightly export job blocked waiting for dependency',
+    id: '003',
+    summary: 'Customer data sync job failing with corrupted payloads',
     status: 'blocked',
-    severity: 'low',
+    severity: 'urgent',
   },
   {
-    id: 'TCK-0005',
-    summary: 'Profile avatar crop alignment request from design',
-    status: 'resolved',
-    severity: 'unimportant',
-  },
-  {
-    id: 'TCK-0006',
-    summary: 'Checkout page spinner hangs on Safari 17',
+    id: '004',
+    summary: 'Login OTP delivery delayed for mobile users',
     status: 'open',
     severity: 'important',
   },
   {
-    id: 'TCK-0007',
+    id: '005',
     summary: 'Search API returning intermittent 502 for APAC',
     status: 'triage',
-    severity: 'urgent',
-  },
-  {
-    id: 'TCK-0008',
-    summary: 'Email digest job delayed by queue backlog',
-    status: 'in-progress',
-    severity: 'normal',
-  },
-  {
-    id: 'TCK-0009',
-    summary: 'Billing export CSV missing tax column headers',
-    status: 'blocked',
-    severity: 'low',
-  },
-  {
-    id: 'TCK-0010',
-    summary: 'SSO callback URL mismatch for enterprise tenant',
-    status: 'resolved',
     severity: 'important',
   },
   {
-    id: 'TCK-0011',
-    summary: 'Mobile push notification badge count incorrect',
-    status: 'open',
-    severity: 'normal',
-  },
-  {
-    id: 'TCK-0012',
-    summary: 'Analytics dashboard filters reset unexpectedly',
-    status: 'triage',
-    severity: 'low',
-  },
-  {
-    id: 'TCK-0013',
+    id: '006',
     summary: 'Webhook retries not honoring exponential backoff',
     status: 'in-progress',
     severity: 'important',
   },
   {
-    id: 'TCK-0014',
-    summary: 'CDN cache purge endpoint timing out on large sites',
-    status: 'blocked',
-    severity: 'urgent',
+    id: '007',
+    summary: 'SSO callback URL mismatch for enterprise tenant',
+    status: 'resolved',
+    severity: 'important',
   },
   {
-    id: 'TCK-0015',
+    id: '008',
+    summary: 'Dashboard widgets show stale analytics values',
+    status: 'open',
+    severity: 'normal',
+  },
+  {
+    id: '009',
+    summary: 'Email digest job delayed by queue backlog',
+    status: 'triage',
+    severity: 'normal',
+  },
+  {
+    id: '010',
+    summary: 'Mobile push notification badge count incorrect',
+    status: 'in-progress',
+    severity: 'normal',
+  },
+  {
+    id: '011',
+    summary: 'Billing export CSV missing tax column headers',
+    status: 'open',
+    severity: 'low',
+  },
+  {
+    id: '012',
+    summary: 'Analytics dashboard filters reset unexpectedly',
+    status: 'triage',
+    severity: 'low',
+  },
+  {
+    id: '013',
+    summary: 'Nightly export job blocked waiting for dependency',
+    status: 'blocked',
+    severity: 'low',
+  },
+  {
+    id: '014',
+    summary: 'Profile avatar crop alignment request from design',
+    status: 'resolved',
+    severity: 'unimportant',
+  },
+  {
+    id: '015',
     summary: 'Theme switcher preference not persisted after logout',
     status: 'resolved',
     severity: 'unimportant',
   },
-]
+];
 
-const seededTicketParticipants = ['Alex', 'Priya', 'Marco', 'Chen', 'Sofia', 'Ravi', 'Nina']
+const severitySeedOrder = {
+  urgent: 0,
+  important: 1,
+  normal: 2,
+  low: 3,
+  unimportant: 4,
+};
+
+const sortStarterTicketSeeds = (tickets) =>
+  [...tickets].sort((a, b) => {
+    const severityDiff =
+      (severitySeedOrder[a.severity] ?? 99) - (severitySeedOrder[b.severity] ?? 99);
+    if (severityDiff !== 0) {
+      return severityDiff;
+    }
+
+    return Number(a.id) - Number(b.id);
+  });
+
+const seededTicketParticipants = [
+  'Alex',
+  'Priya',
+  'Marco',
+  'Chen',
+  'Sofia',
+  'Ravi',
+  'Nina',
+];
 
 const issueKeywords = [
   'issue',
@@ -218,40 +271,43 @@ const issueKeywords = [
   'failed',
   'stuck',
   'broken',
-]
+];
 
-const hasIssueSignal = (text) => issueKeywords.some((keyword) => text.includes(keyword))
+const hasIssueSignal = (text) =>
+  issueKeywords.some((keyword) => text.includes(keyword));
 
 const inferTicketPriority = (text) => {
-  const normalized = normalizeText(text)
+  const normalized = normalizeText(text);
 
   if (/sev[-\s]?1|critical|outage|down|p0/.test(normalized)) {
-    return 'urgent'
+    return 'urgent';
   }
 
   if (/sev[-\s]?2|high|urgent|major|p1/.test(normalized)) {
-    return 'important'
+    return 'important';
   }
 
   if (/sev[-\s]?3|medium|normal|p2/.test(normalized)) {
-    return 'normal'
+    return 'normal';
   }
 
   if (/sev[-\s]?4|minor|low|p3/.test(normalized)) {
-    return 'low'
+    return 'low';
   }
 
-  return 'unimportant'
-}
+  return 'unimportant';
+};
 
-const slugify = (value) => String(value ?? '')
-  .toLowerCase()
-  .replace(/[^a-z0-9\s-]/g, '')
-  .trim()
-  .replace(/\s+/g, '-')
-  .replace(/-+/g, '-')
+const slugify = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 
-const nextTicketNumber = (tickets) => String((tickets?.length ?? 0) + 1).padStart(4, '0')
+const nextTicketNumber = (tickets) =>
+  String((tickets?.length ?? 0) + 1).padStart(3, '0');
 
 const createOtherMessage = ({ id, author, parts }) => ({
   id,
@@ -259,11 +315,18 @@ const createOtherMessage = ({ id, author, parts }) => ({
   sender: 'other',
   time: getNowTime(),
   parts,
-})
+});
 
-const buildSeededTicketConversation = (ticketChannelId, seed, statusText, index) => {
-  const first = seededTicketParticipants[index % seededTicketParticipants.length]
-  const second = seededTicketParticipants[(index + 2) % seededTicketParticipants.length]
+const buildSeededTicketConversation = (
+  ticketChannelId,
+  seed,
+  statusText,
+  index,
+) => {
+  const first =
+    seededTicketParticipants[index % seededTicketParticipants.length];
+  const second =
+    seededTicketParticipants[(index + 2) % seededTicketParticipants.length];
 
   return [
     createOtherMessage({
@@ -301,12 +364,12 @@ const buildSeededTicketConversation = (ticketChannelId, seed, statusText, index)
         },
       ],
     }),
-  ]
-}
+  ];
+};
 
 const createDefaultResponseMessage = (channelId) => {
   if (!defaultResponse) {
-    return null
+    return null;
   }
 
   return {
@@ -315,19 +378,23 @@ const createDefaultResponseMessage = (channelId) => {
     sender: 'other',
     time: getNowTime(),
     parts: defaultResponse.parts ?? [{ type: 'text', text: 'Received.' }],
-  }
-}
+  };
+};
 
 const buildRuleResponseMessage = (channelId, userText) => {
-  const normalizedText = normalizeText(userText)
-  const sortedRules = [...responseRules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
-  const matchedRule = sortedRules.find((rule) => ruleMatches(rule, normalizedText))
+  const normalizedText = normalizeText(userText);
+  const sortedRules = [...responseRules].sort(
+    (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
+  );
+  const matchedRule = sortedRules.find((rule) =>
+    ruleMatches(rule, normalizedText),
+  );
 
   if (!matchedRule) {
-    return null
+    return null;
   }
 
-  const selected = toRuleResponse(matchedRule)
+  const selected = toRuleResponse(matchedRule);
 
   return {
     id: `${channelId}-resp-${Date.now()}`,
@@ -335,62 +402,68 @@ const buildRuleResponseMessage = (channelId, userText) => {
     sender: 'other',
     time: getNowTime(),
     parts: selected.parts ?? [{ type: 'text', text: 'Received.' }],
-  }
-}
+  };
+};
 
 const ensureTicketListChannel = (state) => {
-  const hasChannel = state.channels.some((channel) => channel.id === TICKETS_CHANNEL_ID)
+  const hasChannel = state.channels.some(
+    (channel) => channel.id === TICKETS_CHANNEL_ID,
+  );
   if (!hasChannel) {
     state.channels.push({
       id: TICKETS_CHANNEL_ID,
       name: 'Tickets',
       status: 'Tracker',
-      statusIcon: '📋',
+      signalIcon: '📋',
       sortWeight: -0.5,
-    })
+    });
   }
 
   if (!state.messagesByChannel[TICKETS_CHANNEL_ID]) {
-    state.messagesByChannel[TICKETS_CHANNEL_ID] = []
+    state.messagesByChannel[TICKETS_CHANNEL_ID] = [];
   }
-}
+};
 
 const getTicketStatusValue = (statusText) => {
-  const normalized = normalizeText(statusText)
+  const normalized = normalizeText(statusText);
 
   if (normalized === normalizeText(statusLabel.open)) {
-    return 'open'
+    return 'open';
   }
 
   if (normalized === normalizeText(statusLabel.triage)) {
-    return 'triage'
+    return 'triage';
   }
 
   if (normalized === normalizeText(statusLabel['in-progress'])) {
-    return 'in-progress'
+    return 'in-progress';
+  }
+
+  if (normalized === normalizeText(statusLabel.blocked)) {
+    return 'blocked';
   }
 
   if (normalized === normalizeText(statusLabel.resolved)) {
-    return 'resolved'
+    return 'resolved';
   }
 
-  return 'open'
-}
+  return 'open';
+};
 
 const getChannelSortRank = (channel) => {
   if (channel.id === JUSTIN_CHANNEL_ID) {
-    return -1
+    return -1;
   }
 
   if (channel.id === TICKETS_CHANNEL_ID) {
-    return -0.5
+    return -0.5;
   }
 
-  return statusOrder[channel.ticketStatus || getTicketStatusValue(channel.status)] ?? 99
-}
+  return 0;
+};
 
 const refreshTicketBoardMessage = (state) => {
-  ensureTicketListChannel(state)
+  ensureTicketListChannel(state);
 
   const boardMessage = createOtherMessage({
     id: `${TICKETS_CHANNEL_ID}-board`,
@@ -398,7 +471,7 @@ const refreshTicketBoardMessage = (state) => {
     parts: [
       {
         type: 'text',
-        text: 'Ticket board. Commands: triage ticket TCK-0001, start ticket TCK-0001, resolve ticket TCK-0001, reopen ticket TCK-0001.',
+        text: 'Ticket board. Commands: triage ticket 001, start ticket 001, resolve ticket 001, reopen ticket 001.',
       },
       {
         type: 'ticketList',
@@ -410,36 +483,39 @@ const refreshTicketBoardMessage = (state) => {
         })),
       },
     ],
-  })
+  });
 
-  const list = state.messagesByChannel[TICKETS_CHANNEL_ID]
-  const existingIndex = list.findIndex((message) => message.id === `${TICKETS_CHANNEL_ID}-board`)
+  const list = state.messagesByChannel[TICKETS_CHANNEL_ID];
+  const existingIndex = list.findIndex(
+    (message) => message.id === `${TICKETS_CHANNEL_ID}-board`,
+  );
 
   if (existingIndex >= 0) {
-    list[existingIndex] = boardMessage
+    list[existingIndex] = boardMessage;
   } else {
-    list.unshift(boardMessage)
+    list.unshift(boardMessage);
   }
-}
+};
 
 const startIssueIntake = (state, channelId, problemStatement) => {
-  const questions = issueBot.questions ?? []
+  const questions = issueBot.questions ?? [];
 
   if (questions.length === 0) {
-    return
+    return;
   }
 
   state.intakeByChannel[channelId] = {
     active: true,
-    ticketId: `${issueBot.ticketPrefix || 'TCK'}-${nextTicketNumber(state.tickets)}`,
+    ticketId: nextTicketNumber(state.tickets),
     problemStatement,
     currentQuestionIndex: 0,
     answers: {},
-  }
+  };
 
-  const intro = issueBot.intakeIntro || 'I need more details before creating a ticket.'
-  const firstQuestion = questions[0]?.question
-  const introText = firstQuestion ? `${intro} ${firstQuestion}` : intro
+  const intro =
+    issueBot.intakeIntro || 'I need more details before creating a ticket.';
+  const firstQuestion = questions[0]?.question;
+  const introText = firstQuestion ? `${intro} ${firstQuestion}` : intro;
 
   state.messagesByChannel[channelId].push(
     createOtherMessage({
@@ -447,8 +523,8 @@ const startIssueIntake = (state, channelId, problemStatement) => {
       author: issueBot.author || DEFAULT_BOT_NAME,
       parts: [{ type: 'text', text: introText }],
     }),
-  )
-}
+  );
+};
 
 const closeIntakeAndCreateTicket = (state, channelId, flow) => {
   const safeBaseName = flow.problemStatement
@@ -458,10 +534,10 @@ const closeIntakeAndCreateTicket = (state, channelId, flow) => {
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/^-|-$/g, '');
 
-  const channelSlug = safeBaseName || `case-${state.tickets.length}`
-  const ticketChannelId = `${issueBot.ticketChannelPrefix || 'ticket'}-${flow.ticketId.toLowerCase()}-${channelSlug}`
+  const channelSlug = safeBaseName || `case-${state.tickets.length}`;
+  const ticketChannelId = `${issueBot.ticketChannelPrefix || 'ticket'}-${flow.ticketId.toLowerCase()}-${channelSlug}`;
 
   const ticket = {
     id: flow.ticketId,
@@ -473,25 +549,23 @@ const closeIntakeAndCreateTicket = (state, channelId, flow) => {
     priority: inferTicketPriority(flow.problemStatement),
     createdAt: Date.now(),
     updatedAt: Date.now(),
-  }
-  state.tickets.push(ticket)
+  };
+  state.tickets.push(ticket);
 
-  const severityIcon = severityIconByLevel[ticket.priority] || severityIconByLevel.unimportant
   const newChannel = {
     id: ticketChannelId,
     name: `${ticket.id} ${flow.problemStatement}`,
     status: statusLabel.open,
-    statusIcon: statusIconByValue.open,
+    signalIcon: getCombinedSignalIcon('open', ticket.priority),
     ticketStatus: 'open',
     severity: ticket.priority,
-    severityIcon,
     sortWeight: statusOrder.open,
     updatedAt: Date.now(),
-  }
+  };
 
-  const exists = state.channels.some((channel) => channel.id === newChannel.id)
+  const exists = state.channels.some((channel) => channel.id === newChannel.id);
   if (!exists) {
-    state.channels.push(newChannel)
+    state.channels.push(newChannel);
   }
 
   state.messagesByChannel[ticketChannelId] = [
@@ -516,7 +590,7 @@ const closeIntakeAndCreateTicket = (state, channelId, flow) => {
         },
       ],
     }),
-  ]
+  ];
 
   state.messagesByChannel[channelId].push(
     createOtherMessage({
@@ -529,60 +603,64 @@ const closeIntakeAndCreateTicket = (state, channelId, flow) => {
         },
       ],
     }),
-  )
+  );
 
-  state.latestTicketChannelId = ticketChannelId
-  refreshTicketBoardMessage(state)
-  flow.active = false
-}
+  state.latestTicketChannelId = ticketChannelId;
+  refreshTicketBoardMessage(state);
+  flow.active = false;
+};
 
 const handleIntakeAnswer = (state, channelId, userText) => {
-  const flow = state.intakeByChannel[channelId]
+  const flow = state.intakeByChannel[channelId];
 
   if (!flow?.active) {
-    return false
+    return false;
   }
 
-  const questions = issueBot.questions ?? []
-  const currentQuestion = questions[flow.currentQuestionIndex]
+  const questions = issueBot.questions ?? [];
+  const currentQuestion = questions[flow.currentQuestionIndex];
 
   if (!currentQuestion) {
-    flow.active = false
-    return false
+    flow.active = false;
+    return false;
   }
 
-  flow.answers[currentQuestion.key] = userText
-  flow.currentQuestionIndex += 1
+  flow.answers[currentQuestion.key] = userText;
+  flow.currentQuestionIndex += 1;
 
   if (flow.currentQuestionIndex < questions.length) {
-    const nextQuestion = questions[flow.currentQuestionIndex]
+    const nextQuestion = questions[flow.currentQuestionIndex];
     state.messagesByChannel[channelId].push(
       createOtherMessage({
         id: `${channelId}-intake-q-${Date.now()}`,
         author: issueBot.author || DEFAULT_BOT_NAME,
         parts: [{ type: 'text', text: nextQuestion.question }],
       }),
-    )
-    return true
+    );
+    return true;
   }
 
-  closeIntakeAndCreateTicket(state, channelId, flow)
-  return true
-}
+  closeIntakeAndCreateTicket(state, channelId, flow);
+  return true;
+};
 
 const tryApplyTicketCommand = (state, channelId, userText) => {
-  const normalized = normalizeText(userText)
-  const match = normalized.match(/^(reopen|triage|start|progress|resolve|close)\s+ticket\s+([a-z0-9-]+)$/i)
+  const normalized = normalizeText(userText);
+  const match = normalized.match(
+    /^(reopen|triage|start|progress|resolve|close)\s+ticket\s+((?:tck-)?\d{3})$/i,
+  );
 
   if (!match) {
-    return false
+    return false;
   }
 
-  const command = match[1].toLowerCase()
-  const requestedId = match[2].toUpperCase()
-  const nextStatus = commandToStatus[command]
+  const command = match[1].toLowerCase();
+  const requestedId = match[2].toUpperCase().replace(/^TCK-/, '');
+  const nextStatus = commandToStatus[command];
 
-  const ticket = state.tickets.find((item) => item.id.toUpperCase() === requestedId)
+  const ticket = state.tickets.find(
+    (item) => item.id.toUpperCase() === requestedId,
+  );
 
   if (!ticket) {
     state.messagesByChannel[channelId].push(
@@ -591,20 +669,25 @@ const tryApplyTicketCommand = (state, channelId, userText) => {
         author: issueBot.author || DEFAULT_BOT_NAME,
         parts: [{ type: 'text', text: `Ticket ${requestedId} was not found.` }],
       }),
-    )
-    return true
+    );
+    return true;
   }
 
-  ticket.status = nextStatus
-  ticket.updatedAt = Date.now()
+  ticket.status = nextStatus;
+  ticket.updatedAt = Date.now();
 
-  const ticketChannel = state.channels.find((channel) => channel.id === ticket.channelId)
+  const ticketChannel = state.channels.find(
+    (channel) => channel.id === ticket.channelId,
+  );
   if (ticketChannel) {
-    ticketChannel.status = statusLabel[nextStatus] || nextStatus
-    ticketChannel.statusIcon = statusIconByValue[nextStatus] || '❔'
-    ticketChannel.ticketStatus = nextStatus
-    ticketChannel.sortWeight = statusOrder[nextStatus] ?? 99
-    ticketChannel.updatedAt = Date.now()
+    ticketChannel.status = statusLabel[nextStatus] || nextStatus;
+    ticketChannel.ticketStatus = nextStatus;
+    ticketChannel.sortWeight = statusOrder[nextStatus] ?? 99;
+    ticketChannel.updatedAt = Date.now();
+    ticketChannel.signalIcon = getCombinedSignalIcon(
+      nextStatus,
+      ticketChannel.severity,
+    );
   }
 
   state.messagesByChannel[channelId].push(
@@ -618,21 +701,23 @@ const tryApplyTicketCommand = (state, channelId, userText) => {
         },
       ],
     }),
-  )
+  );
 
-  refreshTicketBoardMessage(state)
-  return true
-}
+  refreshTicketBoardMessage(state);
+  return true;
+};
 
 const buildInitialState = () => {
-  const starterChannels = [...channels]
-  const justinChannel = starterChannels.find((channel) => channel.id === JUSTIN_CHANNEL_ID)
+  const starterChannels = [...channels];
+  const justinChannel = starterChannels.find(
+    (channel) => channel.id === JUSTIN_CHANNEL_ID,
+  );
 
   const initialChannels = justinChannel
     ? [
         {
           ...justinChannel,
-          name: 'Justin',
+          name: 'Justin.ai',
           status: 'Online',
           sortWeight: -1,
         },
@@ -640,16 +725,18 @@ const buildInitialState = () => {
     : [
         {
           id: JUSTIN_CHANNEL_ID,
-          name: 'Justin',
+          name: 'Justin.ai',
           status: 'Online',
           sortWeight: -1,
         },
-      ]
+      ];
 
-  const initialMessagesByChannel = JSON.parse(JSON.stringify(seedMessagesByChannel))
+  const initialMessagesByChannel = JSON.parse(
+    JSON.stringify(seedMessagesByChannel),
+  );
   for (const key of Object.keys(initialMessagesByChannel)) {
     if (key !== JUSTIN_CHANNEL_ID) {
-      delete initialMessagesByChannel[key]
+      delete initialMessagesByChannel[key];
     }
   }
 
@@ -659,29 +746,29 @@ const buildInitialState = () => {
     intakeByChannel: {},
     tickets: [],
     latestTicketChannelId: null,
-  }
+  };
 
   if (!initial.messagesByChannel[JUSTIN_CHANNEL_ID]) {
-    initial.messagesByChannel[JUSTIN_CHANNEL_ID] = []
+    initial.messagesByChannel[JUSTIN_CHANNEL_ID] = [];
   }
 
   initial.messagesByChannel[JUSTIN_CHANNEL_ID] = [
     createOtherMessage({
       id: 'general-justin-welcome',
       author: issueBot.author || DEFAULT_BOT_NAME,
-      parts: [{ type: 'text', text: 'Hi, I am Justin. Share an issue and I will help file or route tickets.' }],
+      parts: [
+        {
+          type: 'text',
+          text: 'Good morning, Ivan! \u2600\ufe0f Ready to conquer the day? We\u2019ve got 10 open issues waiting for your magic touch\u20148 carried over from yesterday and 2 fresh ones that just popped in! \ud83d\ude80 Would you like a quick overview of everything on the radar, or should we dive straight into the highest priority issue?',
+        },
+      ],
     }),
-    createOtherMessage({
-      id: 'general-justin-guidance',
-      author: issueBot.author || DEFAULT_BOT_NAME,
-      parts: [{ type: 'text', text: 'Use commands like: triage ticket TCK-0007 or resolve ticket TCK-0011.' }],
-    }),
-  ]
+  ];
 
-  starterTicketSeeds.forEach((seed, index) => {
-    const ticketChannelId = `ticket-${seed.id.toLowerCase()}-${slugify(seed.summary).slice(0, 36)}`
-    const createdAt = Date.now() - (index + 1) * 60000
-    const statusText = statusLabel[seed.status] || statusLabel.open
+  sortStarterTicketSeeds(starterTicketSeeds).forEach((seed, index) => {
+    const ticketChannelId = `ticket-${seed.id.toLowerCase()}-${slugify(seed.summary).slice(0, 36)}`;
+    const createdAt = Date.now() - (index + 1) * 60000;
+    const statusText = statusLabel[seed.status] || statusLabel.open;
 
     initial.tickets.push({
       id: seed.id,
@@ -693,52 +780,95 @@ const buildInitialState = () => {
       priority: seed.severity,
       createdAt,
       updatedAt: createdAt,
-    })
+    });
 
     initial.channels.push({
       id: ticketChannelId,
       name: `${seed.id} ${seed.summary}`,
       status: statusText,
-      statusIcon: statusIconByValue[seed.status] || '❔',
+      signalIcon: getCombinedSignalIcon(seed.status, seed.severity),
       ticketStatus: seed.status,
       severity: seed.severity,
-      severityIcon: severityIconByLevel[seed.severity] || severityIconByLevel.unimportant,
       sortWeight: statusOrder[seed.status] ?? 99,
       updatedAt: createdAt,
-    })
+    });
 
     initial.messagesByChannel[ticketChannelId] = buildSeededTicketConversation(
       ticketChannelId,
       seed,
       statusText,
       index,
-    )
-  })
+    );
+  });
 
-  ensureTicketListChannel(initial)
-  refreshTicketBoardMessage(initial)
+  // Lorra.ai opening message in ticket-002
+  const ticket002Channel = initial.channels.find((ch) => ch.id.startsWith('ticket-002'));
+  if (ticket002Channel) {
+    initial.messagesByChannel[ticket002Channel.id].push(
+      createOtherMessage({
+        id: `${ticket002Channel.id}-lorra-intro`,
+        author: 'Lorra.ai',
+        parts: [
+          {
+            type: 'text',
+            text:
+              'Hi Ivan! Hi Justin! \uD83D\uDC4B So great to connect with you both! \uD83C\uDF1F\n\n' +
+              'I caught your ping from the agent registry. I see we\u2019re dealing with that tricky 504 Gateway Timeout on Ticket #4092\u2014definitely a job for some deep-dive log hunting!\n\n' +
+              'Leave the heavy lifting to me. I\u2019m pulling up our production event logs for the 6:45 AM deployment window right now to see exactly where that handshake is breaking down. \uD83D\uDD0D\uD83D\uDCBB\n\n' +
+              'Give me just a quick moment to parse the data stream, and I\u2019ll post the culprit lines right here! What specific error strings or microservice scopes should I isolate first?',
+          },
+        ],
+      }),
+    );
+  }
 
-  return initial
-}
+  ensureTicketListChannel(initial);
+  refreshTicketBoardMessage(initial);
 
-const initialState = buildInitialState()
+  return initial;
+};
+
+const initialState = buildInitialState();
 
 const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
     clearLatestTicketChannel(state) {
-      state.latestTicketChannelId = null
+      state.latestTicketChannelId = null;
+    },
+    addBotReply: {
+      reducer(state, action) {
+        const { channelId, message } = action.payload;
+        if (!state.messagesByChannel[channelId]) {
+          state.messagesByChannel[channelId] = [];
+        }
+        state.messagesByChannel[channelId].push(message);
+      },
+      prepare({ channelId, parts }) {
+        return {
+          payload: {
+            channelId,
+            message: {
+              id: `${channelId}-bot-${Date.now()}`,
+              author: DEFAULT_BOT_NAME,
+              sender: 'other',
+              time: getNowTime(),
+              parts,
+            },
+          },
+        };
+      },
     },
     addMessage: {
       reducer(state, action) {
-        const { channelId, message } = action.payload
+        const { channelId, message } = action.payload;
 
         if (!state.messagesByChannel[channelId]) {
-          state.messagesByChannel[channelId] = []
+          state.messagesByChannel[channelId] = [];
         }
 
-        state.messagesByChannel[channelId].push(message)
+        state.messagesByChannel[channelId].push(message);
       },
       prepare({ channelId, text }) {
         return {
@@ -757,51 +887,58 @@ const chatSlice = createSlice({
               ],
             },
           },
-        }
+        };
       },
     },
     addAutoResponse: {
       reducer(state, action) {
-        const { channelId, ruleMessage, userText } = action.payload
+        const { channelId, ruleMessage, userText } = action.payload;
 
         if (!state.messagesByChannel[channelId]) {
-          state.messagesByChannel[channelId] = []
+          state.messagesByChannel[channelId] = [];
         }
 
-        ensureTicketListChannel(state)
+        ensureTicketListChannel(state);
 
         if (tryApplyTicketCommand(state, channelId, userText)) {
-          return
+          return;
         }
 
         if (handleIntakeAnswer(state, channelId, userText)) {
-          return
+          return;
         }
 
         // Keep the Justin channel as a strict 1:1 between Justin and You.
         if (channelId === JUSTIN_CHANNEL_ID) {
-          const justinReply = createDefaultResponseMessage(channelId)
-          if (justinReply) {
-            state.messagesByChannel[channelId].push(justinReply)
+          const normalizedText = normalizeText(userText);
+
+          if (hasIssueSignal(normalizedText)) {
+            startIssueIntake(state, channelId, userText);
+            return;
           }
-          return
+
+          const justinReply = createDefaultResponseMessage(channelId);
+          if (justinReply) {
+            state.messagesByChannel[channelId].push(justinReply);
+          }
+          return;
         }
 
         if (ruleMessage) {
-          state.messagesByChannel[channelId].push(ruleMessage)
-          return
+          state.messagesByChannel[channelId].push(ruleMessage);
+          return;
         }
 
-        const normalizedText = normalizeText(userText)
+        const normalizedText = normalizeText(userText);
 
         if (hasIssueSignal(normalizedText)) {
-          startIssueIntake(state, channelId, userText)
-          return
+          startIssueIntake(state, channelId, userText);
+          return;
         }
 
-        const fallback = createDefaultResponseMessage(channelId)
+        const fallback = createDefaultResponseMessage(channelId);
         if (fallback) {
-          state.messagesByChannel[channelId].push(fallback)
+          state.messagesByChannel[channelId].push(fallback);
         }
       },
       prepare({ channelId, userText }) {
@@ -811,32 +948,40 @@ const chatSlice = createSlice({
             userText,
             ruleMessage: buildRuleResponseMessage(channelId, userText),
           },
-        }
+        };
       },
     },
   },
-})
+});
 
-export const { clearLatestTicketChannel, addMessage, addAutoResponse } = chatSlice.actions
+export const { clearLatestTicketChannel, addBotReply, addMessage, addAutoResponse } =
+  chatSlice.actions;
 
 export const selectChannels = (state) => {
-  const channelsList = state.chat.channels ?? []
+  const channelsList = state.chat.channels ?? [];
 
   return [...channelsList].sort((a, b) => {
-    const rankDiff = getChannelSortRank(a) - getChannelSortRank(b)
+    const rankDiff = getChannelSortRank(a) - getChannelSortRank(b);
     if (rankDiff !== 0) {
-      return rankDiff
+      return rankDiff;
     }
 
-    const updatedDiff = (b.updatedAt || 0) - (a.updatedAt || 0)
+    const severityDiff =
+      (severitySeedOrder[a.severity] ?? 99) - (severitySeedOrder[b.severity] ?? 99);
+    if (severityDiff !== 0) {
+      return severityDiff;
+    }
+
+    const updatedDiff = (b.updatedAt || 0) - (a.updatedAt || 0);
     if (updatedDiff !== 0) {
-      return updatedDiff
+      return updatedDiff;
     }
 
-    return (a.name || '').localeCompare(b.name || '')
-  })
-}
-export const selectMessagesByChannel = (state) => state.chat.messagesByChannel
-export const selectLatestTicketChannelId = (state) => state.chat.latestTicketChannelId
+    return (a.name || '').localeCompare(b.name || '');
+  });
+};
+export const selectMessagesByChannel = (state) => state.chat.messagesByChannel;
+export const selectLatestTicketChannelId = (state) =>
+  state.chat.latestTicketChannelId;
 
-export default chatSlice.reducer
+export default chatSlice.reducer;

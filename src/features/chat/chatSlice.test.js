@@ -7,21 +7,19 @@ import chatReducer, {
 const reduce = (state, action) => chatReducer(state, action)
 
 describe('chatSlice bot workflow', () => {
-  it('starts with Justin plus seeded tickets and metadata icons', () => {
+  it('starts with Justin.ai plus seeded tickets and metadata icons', () => {
     const state = reduce(undefined, { type: '@@INIT' })
 
     const justinChannel = state.channels.find((channel) => channel.id === 'general')
-    expect(justinChannel.name).toBe('Justin')
+    expect(justinChannel.name).toBe('Justin.ai')
 
     const ticketChannels = state.channels.filter(
       (channel) => channel.id !== 'general' && channel.id !== 'tickets',
     )
-    expect(ticketChannels).toHaveLength(5)
-    expect(state.tickets).toHaveLength(5)
+    expect(ticketChannels).toHaveLength(15)
+    expect(state.tickets).toHaveLength(15)
 
-    const seededWithIcons = ticketChannels.every(
-      (channel) => Boolean(channel.statusIcon) && Boolean(channel.severityIcon),
-    )
+    const seededWithIcons = ticketChannels.every((channel) => Boolean(channel.signalIcon))
     expect(seededWithIcons).toBe(true)
 
     const orderedChannels = selectChannels({ chat: state })
@@ -39,9 +37,8 @@ describe('chatSlice bot workflow', () => {
     const last = messages[messages.length - 1]
 
     expect(last.sender).toBe('other')
-    expect(last.author).toBe('Leo')
+    expect(last.author).toBe('Justin.ai')
     expect(last.parts[0].type).toBe('text')
-    expect(last.parts[1].type).toBe('table')
   })
 
   it('runs issue intake and creates ticket + new channel after all answers', () => {
@@ -61,9 +58,9 @@ describe('chatSlice bot workflow', () => {
     expect(state.tickets).toHaveLength(startingTicketCount + 1)
 
     const ticket = state.tickets[state.tickets.length - 1]
-    expect(ticket.id).toBe('TCK-0006')
+    expect(ticket.id).toBe('016')
     expect(ticket.status).toBe('open')
-    expect(ticket.channelId).toContain('ticket-tck-0006')
+    expect(ticket.channelId).toContain('ticket-016')
 
     expect(state.channels.some((channel) => channel.id === ticket.channelId)).toBe(true)
     expect(state.messagesByChannel[ticket.channelId]).toBeDefined()
@@ -79,9 +76,9 @@ describe('chatSlice bot workflow', () => {
     state = reduce(state, addAutoResponse({ channelId: 'general', userText: 'always since 9am' }))
     state = reduce(state, addAutoResponse({ channelId: 'general', userText: 'restarted app' }))
 
-    state = reduce(state, addAutoResponse({ channelId: 'general', userText: 'resolve ticket TCK-0001' }))
+    state = reduce(state, addAutoResponse({ channelId: 'general', userText: 'resolve ticket 001' }))
 
-    const ticket = state.tickets.find((item) => item.id === 'TCK-0001')
+    const ticket = state.tickets.find((item) => item.id === '001')
     expect(ticket.status).toBe('resolved')
 
     const ticketChannel = state.channels.find((channel) => channel.id === ticket.channelId)

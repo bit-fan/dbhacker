@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   addAutoResponse,
+  addBotReply,
   addMessage,
   clearLatestTicketChannel,
   selectChannels,
@@ -11,25 +12,72 @@ import {
 } from '../../features/chat/chatSlice'
 import MessageCards from '../../components/chatCards/MessageCards'
 
-const statusWeight = {
-  Open: 0,
-  Triage: 1,
-  'In progress': 2,
-  Blocked: 3,
-  Resolved: 4,
+const BOT_STATUS_LABELS = ['Generating', 'Thinking', 'Working']
+
+const BotStatusBar = () => {
+  const [labelIdx, setLabelIdx] = useState(0)
+  const [dots, setDots] = useState(2)
+
+  useEffect(() => {
+    const id = setInterval(() => setDots((d) => (d >= 6 ? 1 : d + 1)), 400)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setLabelIdx((i) => (i + 1) % BOT_STATUS_LABELS.length),
+      2500,
+    )
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <article className="flex justify-start">
+      <div className="flex max-w-[85%] flex-col items-start">
+        <div className="mb-1 flex items-center gap-2 text-sm">
+          <span className="text-base leading-none">👱</span>
+          <span className="font-semibold text-blue-100/95">Justin.ai</span>
+        </div>
+        <div className="rounded-lg rounded-tl-sm border border-blue-500/25 bg-[#001c39] px-3.5 py-2.5 text-sm">
+          <span className="italic text-blue-200/60">
+            {BOT_STATUS_LABELS[labelIdx]}{'·'.repeat(dots)}
+          </span>
+        </div>
+      </div>
+    </article>
+  )
 }
 
-const shuffled = (items) => {
-  const copy = [...items]
-
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const temp = copy[i]
-    copy[i] = copy[j]
-    copy[j] = temp
+const SignalIcon = ({ icon }) => {
+  if (!icon) {
+    return null
   }
 
-  return copy
+  if (icon === 'fire') {
+    return (
+      <span
+        className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-500/20 px-1 text-base leading-none shadow-[0_0_14px_rgba(251,146,60,0.6)] animate-pulse"
+        title="Highest priority"
+      >
+        🔥
+      </span>
+    )
+  }
+
+  return <span className="text-sm leading-none">{icon}</span>
+}
+
+const getUserIcon = (author, isSelf) => {
+  if (isSelf) {
+    return '🙂'
+  }
+
+  const normalized = String(author ?? '').toLowerCase()
+  if (normalized === 'justin.ai' || normalized === 'justin') {
+    return '👱'
+  }
+
+  return '👤'
 }
 
 function ChatPage() {
@@ -37,10 +85,11 @@ function ChatPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const [draft, setDraft] = useState('')
+  const [botStatus, setBotStatus] = useState(null) // set to true to show Justin typing indicator
   const messagesEndRef = useRef(null)
+  const justinStepRef = useRef(0)
 
   const channels = useSelector(selectChannels)
-  const [mockOrderByChannelId, setMockOrderByChannelId] = useState({})
   const messagesByChannel = useSelector(selectMessagesByChannel)
   const latestTicketChannelId = useSelector(selectLatestTicketChannelId)
 
@@ -53,72 +102,8 @@ function ChatPage() {
   const activeMessages = messagesByChannel[activeChannel.id] ?? []
 
   useEffect(() => {
-    const ticketIds = channels
-      .filter((channel) => channel.id !== 'general' && channel.id !== 'tickets')
-      .map((channel) => channel.id)
-
-    if (ticketIds.length === 0) {
-      setMockOrderByChannelId({})
-      return
-    }
-
-    const randomizedIds = shuffled(ticketIds)
-    const nextOrder = {}
-    randomizedIds.forEach((ticketId, index) => {
-      nextOrder[ticketId] = index
-    })
-
-    setMockOrderByChannelId(nextOrder)
-  }, [channels])
-
-  const sortedChannels = useMemo(() => {
-    if (!channels?.length) {
-      return channels
-    }
-
-    const justinChannel = channels.find((channel) => channel.id === 'general')
-    const ticketBoardChannel = channels.find((channel) => channel.id === 'tickets')
-
-    const ticketChannels = channels.filter(
-      (channel) => channel.id !== 'general' && channel.id !== 'tickets',
-    )
-
-    const sortedTickets = [...ticketChannels].sort((a, b) => {
-      const mockDiff =
-        (mockOrderByChannelId[a.id] ?? Number.MAX_SAFE_INTEGER)
-        - (mockOrderByChannelId[b.id] ?? Number.MAX_SAFE_INTEGER)
-
-      if (mockDiff !== 0) {
-        return mockDiff
-      }
-
-      const statusDiff = (statusWeight[a.status] ?? 99) - (statusWeight[b.status] ?? 99)
-      if (statusDiff !== 0) {
-        return statusDiff
-      }
-
-      const updatedDiff = (b.updatedAt || 0) - (a.updatedAt || 0)
-      if (updatedDiff !== 0) {
-        return updatedDiff
-      }
-
-      return (a.name || '').localeCompare(b.name || '')
-    })
-
-    const ordered = []
-    if (justinChannel) {
-      ordered.push(justinChannel)
-    }
-    if (ticketBoardChannel) {
-      ordered.push(ticketBoardChannel)
-    }
-    ordered.push(...sortedTickets)
-    return ordered
-  }, [channels, mockOrderByChannelId])
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [activeChannel.id, activeMessages.length])
+  }, [activeChannel.id, activeMessages.length, botStatus])
 
   useEffect(() => {
     if (!latestTicketChannelId) {
@@ -134,54 +119,114 @@ function ChatPage() {
     dispatch(clearLatestTicketChannel())
   }, [activeChannel.id, dispatch, latestTicketChannelId, navigate])
 
-  useEffect(() => {
-    const reorderChannels = () => {
-      setMockOrderByChannelId((current) => {
-        const ticketIds = Object.keys(current)
-        if (ticketIds.length <= 1) {
-          return current
-        }
+  const JUSTIN_TICKET_TEXT_PRE =
+    'You got it, Ivan! \uD83D\uDD34 Here is the fresh emergency that just landed on our radar:\n\n' +
+    '\uD83D\uDEA8 Ticket #4092: Checkout Gateway Timeout (504 Error)\n\n' +
+    'Severity: Critical \uD83D\uDD34\n\n' +
+    'Impact: Customers cannot complete purchases using credit cards.\n\n' +
+    'Reported: 15 minutes ago by Automated Monitoring.\n\n' +
+    'Current Status: \uD83D\uDCE5 Unassigned (Needs eyes ASAP!).'
 
-        const randomizedIds = shuffled(ticketIds)
-        const nextOrder = {}
-        randomizedIds.forEach((ticketId, index) => {
-          nextOrder[ticketId] = index
-        })
+  const JUSTIN_TICKET_TEXT_POST =
+    'Would you like to assign this to yourself to start debugging, or should we page the on-call engineer right away? \uD83D\uDEE0\uFE0F'
 
-        return nextOrder
-      })
-    }
+  const JUSTIN_ASSIGNED_TEXT =
+    "I\u2019ve officially assigned Ticket #4092 to you, and I\u2019m locked in as your co-pilot. \uD83E\uDD1D\n\n" +
+    '\uD83D\uDD0D Here is what I dug up while you were looking:\n\n' +
+    'The Culprit: The payment-gateway-router is throwing a 504 Gateway Timeout every time the payload exceeds 1.2MB.\n\n' +
+    'Recent Changes: A minor deployment went out at 6:45 AM this morning affecting the checkout validation logic.\n\n' +
+    '\uD83D\uDE80 Where should we start?\n\n' +
+    'Check the logs: Pull the last 5 minutes of server logs for the payment microservice.\n\n' +
+    'Rollback: Revert that 6:45 AM deployment immediately to clear the pipeline.\n\n' +
+    'Trace the code: Look at the exact error line in the validation script.'
 
-    const jitteredInterval = () => Math.floor(Math.random() * 2000) + 3000
-    let timeoutId
-
-    const scheduleNext = () => {
-      timeoutId = window.setTimeout(() => {
-        reorderChannels()
-        scheduleNext()
-      }, jitteredInterval())
-    }
-
-    scheduleNext()
-
-    return () => {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId)
-      }
-    }
-  }, [])
+  const JUSTIN_LORRA_TEXT =
+    'Oh, fantastic news! \uD83C\uDF1F I just scanned our agent registry and found Lorra.ai, our dedicated Payment Vendor Integration Specialist! ' +
+    'She is currently online, fully available, and ready to roll! \uD83D\uDE80\n\n' +
+    'Should I loop her into this thread right now so she can help us untangle this connection handshake? \uD83E\uDD1D\u2728'
 
   const submitMessage = (event) => {
     event.preventDefault()
     const text = draft.trim()
+    if (!text) return
 
-    if (!text) {
+    dispatch(addMessage({ channelId: activeChannel.id, text }))
+    setDraft('')
+
+    if (activeChannel.id === 'general') {
+      setBotStatus(true)
+      const step = justinStepRef.current
+      justinStepRef.current += 1
+
+      if (step === 0) {
+        setTimeout(() => {
+          dispatch(
+            addBotReply({
+              channelId: 'general',
+              parts: [
+                {
+                  type: 'image',
+                  src: 'issue1.jpeg',
+                  alt: 'Justin report',
+                  caption: 'Here\u2019s a quick snapshot \u2014 full report loading now.',
+                },
+              ],
+            }),
+          )
+          setBotStatus(null)
+        }, 2000)
+      } else if (step === 1) {
+        setTimeout(() => {
+          dispatch(
+            addBotReply({
+              channelId: 'general',
+              parts: [
+                { type: 'text', text: JUSTIN_TICKET_TEXT_PRE },
+                { type: 'image', src: 'issue2.jpeg', alt: 'Issue quick summary' },
+                { type: 'text', text: JUSTIN_TICKET_TEXT_POST },
+              ],
+            }),
+          )
+          setBotStatus(null)
+        }, 2000)
+      } else if (step === 2) {
+        setTimeout(() => {
+          dispatch(
+            addBotReply({
+              channelId: 'general',
+              parts: [{ type: 'text', text: JUSTIN_ASSIGNED_TEXT }],
+            }),
+          )
+          setBotStatus(null)
+        }, 2000)
+      } else if (step === 3) {
+        setTimeout(() => {
+          dispatch(
+            addBotReply({
+              channelId: 'general',
+              parts: [{ type: 'text', text: JUSTIN_LORRA_TEXT }],
+            }),
+          )
+          setBotStatus(null)
+        }, 2000)
+      } else if (step === 4) {
+        setTimeout(() => {
+          setBotStatus(null)
+          const ticket002 = channels.find((ch) => ch.id.startsWith('ticket-002'))
+          if (ticket002) {
+            navigate(`/chat/${ticket002.id}`)
+          }
+        }, 2000)
+      } else {
+        setTimeout(() => {
+          dispatch(addAutoResponse({ channelId: 'general', userText: text }))
+          setBotStatus(null)
+        }, 2000)
+      }
       return
     }
 
-    dispatch(addMessage({ channelId: activeChannel.id, text }))
     dispatch(addAutoResponse({ channelId: activeChannel.id, userText: text }))
-    setDraft('')
   }
 
   return (
@@ -189,7 +234,7 @@ function ChatPage() {
       <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[280px_1fr]">
         <aside className="overflow-y-auto border-b border-blue-500/25 bg-[#00152d]/85 p-3 md:border-b-0 md:border-r">
           <div className="space-y-1.5">
-            {sortedChannels.map((channel) => {
+            {channels.map((channel) => {
               const isActive = channel.id === activeChannel.id
 
               return (
@@ -205,9 +250,8 @@ function ChatPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="truncate text-sm font-semibold">{channel.name}</p>
-                    <div className="flex shrink-0 items-center gap-1 text-sm">
-                      {channel.statusIcon ? <span className="text-blue-200/90">{channel.statusIcon}</span> : null}
-                      {channel.severityIcon ? <span className="text-amber-300">{channel.severityIcon}</span> : null}
+                    <div className="flex shrink-0 items-center">
+                      <SignalIcon icon={channel.signalIcon} />
                     </div>
                   </div>
                 </button>
@@ -222,14 +266,9 @@ function ChatPage() {
             <div className="mt-0.5 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-blue-50">{activeChannel.name}</h2>
               <div className="flex items-center gap-2 text-xs font-medium text-blue-100/90">
-                {activeChannel.statusIcon ? (
+                {activeChannel.signalIcon ? (
                   <span className="rounded-sm border border-blue-400/30 bg-[#00244a] px-2 py-1">
-                    {activeChannel.statusIcon} {activeChannel.status || 'Status'}
-                  </span>
-                ) : null}
-                {activeChannel.severityIcon ? (
-                  <span className="rounded-sm border border-amber-400/35 bg-[#2a2208] px-2 py-1 text-amber-200">
-                    {activeChannel.severityIcon} {activeChannel.severity || 'Severity'}
+                    <SignalIcon icon={activeChannel.signalIcon} /> {activeChannel.status || 'Status'}
                   </span>
                 ) : null}
               </div>
@@ -240,6 +279,8 @@ function ChatPage() {
             <div className="space-y-3">
               {activeMessages.map((message) => {
                 const isSelf = message.sender === 'self'
+                const authorName = message.author || (isSelf ? 'Me' : 'Bot')
+                const userIcon = getUserIcon(authorName, isSelf)
 
                 return (
                   <article
@@ -247,9 +288,9 @@ function ChatPage() {
                     className={`flex ${isSelf ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-[85%] ${isSelf ? 'items-end' : 'items-start'} flex flex-col`}>
-                      <div className={`mb-1 flex items-center gap-2 text-xs text-blue-200/60 ${isSelf ? 'justify-end' : 'justify-start'}`}>
-                        <span className="font-semibold text-blue-100/90">{message.author || (isSelf ? 'You' : 'Bot')}</span>
-                        <span className="text-blue-200/55">{message.time}</span>
+                      <div className={`mb-1 flex items-center gap-2 text-sm ${isSelf ? 'justify-end' : 'justify-start'}`}>
+                        <span className="text-base leading-none">{userIcon}</span>
+                        <span className="font-semibold text-blue-100/95">{authorName}</span>
                       </div>
                       <div
                         className={`max-w-full rounded-lg px-3.5 py-2.5 text-sm ${
@@ -260,12 +301,15 @@ function ChatPage() {
                       >
                         <MessageCards parts={message.parts} />
                       </div>
+                      <p className="mt-1 text-xs text-blue-200/55">{message.time}</p>
                     </div>
                   </article>
                 )
               })}
-              <div ref={messagesEndRef} />
             </div>
+            {/* botStatus: set to truthy to show Justin.ai typing indicator */}
+            {botStatus && <BotStatusBar />}
+            <div ref={messagesEndRef} />
           </div>
 
           <form onSubmit={submitMessage} className="sticky bottom-0 z-10 border-t border-blue-500/25 bg-[#001a35]/95 p-3 backdrop-blur">

@@ -89,7 +89,7 @@
     ]
   },
   "defaultResponse": {
-    "author": "Justin",
+    "author": "Justin.ai",
     "parts": [
       { "type": "text", "text": "Thanks, message received." }
     ]
@@ -219,8 +219,8 @@
     }
   ],
   "issueBot": {
-    "author": "Justin",
-    "ticketPrefix": "TCK",
+    "author": "Justin.ai",
+    "ticketPrefix": "",
     "ticketChannelPrefix": "ticket",
     "intakeIntro": "I cannot solve this immediately. I need a few details before I create a support ticket.",
     "questions": [
