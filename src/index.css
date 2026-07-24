@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 :root {
+  font-size: 150%;
   color-scheme: dark;
   font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;

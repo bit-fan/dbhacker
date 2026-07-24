@@ -181,9 +181,7 @@ function ChatPage() {
             addBotReply({
               channelId: 'general',
               parts: [
-                { type: 'text', text: JUSTIN_TICKET_TEXT_PRE },
-                { type: 'image', src: 'issue2.jpeg', alt: 'Issue quick summary' },
-                { type: 'text', text: JUSTIN_TICKET_TEXT_POST },
+                { type: 'text', text: JUSTIN_TICKET_TEXT_PRE + '\n\n' + JUSTIN_TICKET_TEXT_POST },
               ],
             }),
           )
@@ -231,7 +229,7 @@ function ChatPage() {
 
   return (
     <section className="h-full min-h-0 w-full overflow-hidden rounded-sm border border-blue-500/35 bg-[#001a36]/90 shadow-[0_20px_50px_rgba(0,15,40,0.45)]">
-      <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[280px_1fr]">
+        <div className="grid h-full min-h-0 grid-cols-1 md:grid-cols-[490px_1fr]">
         <aside className="overflow-y-auto border-b border-blue-500/25 bg-[#00152d]/85 p-3 md:border-b-0 md:border-r">
           <div className="space-y-1.5">
             {channels.map((channel) => {
