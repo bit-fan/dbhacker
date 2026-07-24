@@ -205,15 +205,11 @@ function ChatPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="truncate text-sm font-semibold">{channel.name}</p>
+                    <div className="flex shrink-0 items-center gap-1 text-sm">
+                      {channel.statusIcon ? <span className="text-blue-200/90">{channel.statusIcon}</span> : null}
+                      {channel.severityIcon ? <span className="text-amber-300">{channel.severityIcon}</span> : null}
+                    </div>
                   </div>
-                  {(channel.statusIcon || channel.severityIcon) ? (
-                    <p className="mt-1 text-[11px] font-medium tracking-wide text-blue-200/85">
-                      {channel.statusIcon ? `status ${channel.statusIcon}` : ''}
-                      {channel.statusIcon && channel.severityIcon ? '  ' : ''}
-                      {channel.severityIcon ? `severity ${channel.severityIcon}` : ''}
-                    </p>
-                  ) : null}
-                  <p className="mt-0.5 text-xs text-blue-200/60">{channel.status}</p>
                 </button>
               )
             })}
@@ -223,7 +219,21 @@ function ChatPage() {
         <div className="flex min-h-0 flex-col overflow-hidden">
           <header className="sticky top-0 z-10 border-b border-blue-500/25 bg-[#001a35]/95 px-4 py-3 backdrop-blur">
             <p className="text-xs uppercase tracking-[0.22em] text-blue-300/85">Chat</p>
-            <h2 className="mt-0.5 text-xl font-semibold text-blue-50">{activeChannel.name}</h2>
+            <div className="mt-0.5 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-blue-50">{activeChannel.name}</h2>
+              <div className="flex items-center gap-2 text-xs font-medium text-blue-100/90">
+                {activeChannel.statusIcon ? (
+                  <span className="rounded-sm border border-blue-400/30 bg-[#00244a] px-2 py-1">
+                    {activeChannel.statusIcon} {activeChannel.status || 'Status'}
+                  </span>
+                ) : null}
+                {activeChannel.severityIcon ? (
+                  <span className="rounded-sm border border-amber-400/35 bg-[#2a2208] px-2 py-1 text-amber-200">
+                    {activeChannel.severityIcon} {activeChannel.severity || 'Severity'}
+                  </span>
+                ) : null}
+              </div>
+            </div>
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 py-3">
